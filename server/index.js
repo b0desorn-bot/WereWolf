@@ -74,9 +74,14 @@ io.on('connection', (socket) => {
   socket.on('create_room', ({ hostName }, callback) => {
     try {
       const room = gameManager.createRoom(socket.id, hostName);
+      const hostPlayer = room.players.get(socket.id);
       socket.join(room.code);
       if (typeof callback === 'function') {
-        callback({ success: true, roomCode: room.code });
+        callback({ 
+          success: true, 
+          roomCode: room.code, 
+          sessionToken: hostPlayer ? hostPlayer.sessionToken : null 
+        });
       }
       broadcastRoomState(room);
     } catch (err) {
@@ -103,10 +108,44 @@ io.on('connection', (socket) => {
         return;
       }
 
-      room.addPlayer(socket.id, playerName, false);
+      const player = room.addPlayer(socket.id, playerName, false);
       socket.join(room.code);
       if (typeof callback === 'function') {
-        callback({ success: true, roomCode: room.code });
+        callback({ 
+          success: true, 
+          roomCode: room.code, 
+          sessionToken: player.sessionToken 
+        });
+      }
+      broadcastRoomState(room);
+    } catch (err) {
+      if (typeof callback === 'function') callback({ success: false, message: err.message });
+    }
+  });
+
+  // 2.1 Reconnect Session (Auto-reconnect on screen lock / app switch)
+  socket.on('reconnect_session', ({ roomCode, sessionToken }, callback) => {
+    try {
+      const cleanCode = (roomCode || '').trim().toUpperCase();
+      const room = gameManager.getRoom(cleanCode);
+      if (!room) {
+        if (typeof callback === 'function') callback({ success: false, message: 'ห้องไม่มีอยู่แล้ว' });
+        return;
+      }
+
+      const player = room.reconnectPlayer(sessionToken, socket.id);
+      if (!player) {
+        if (typeof callback === 'function') callback({ success: false, message: 'ไม่พบเซสชันผู้เล่นเดิม' });
+        return;
+      }
+
+      socket.join(room.code);
+      if (typeof callback === 'function') {
+        callback({ 
+          success: true, 
+          roomCode: room.code, 
+          sessionToken: player.sessionToken 
+        });
       }
       broadcastRoomState(room);
     } catch (err) {
@@ -317,16 +356,18 @@ io.on('connection', (socket) => {
     if (typeof callback === 'function') callback({ success: true });
   });
 
-  // 22. Disconnect
+  // 22. Disconnect (Keep player for 3 minutes so phone sleep/call does not kick them)
   socket.on('disconnect', () => {
     const result = gameManager.findPlayerRoom(socket.id);
     if (result) {
-      result.room.removePlayer(socket.id);
-      if (result.room.players.size === 0) {
-        gameManager.deleteRoom(result.room.code);
-      } else {
-        broadcastRoomState(result.room);
-      }
+      result.room.markDisconnected(socket.id, 180000, () => {
+        if (result.room.players.size === 0) {
+          gameManager.deleteRoom(result.room.code);
+        } else {
+          broadcastRoomState(result.room);
+        }
+      });
+      broadcastRoomState(result.room);
     }
   });
 });

@@ -70,9 +70,11 @@ export class GameRoom {
   addPlayer(id, name, isHost = false) {
     const avatarList = ['🦊', '🐻', '🦉', '🐱', '🐶', '🦁', '🐯', '🐰', '🐼', '🐨', '🐸', '🐵'];
     const randomAvatar = avatarList[this.players.size % avatarList.length];
+    const sessionToken = 'tok_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
 
     const player = {
       id,
+      sessionToken,
       name: name || `ผู้เล่น ${this.players.size + 1}`,
       avatar: randomAvatar,
       isHost,
@@ -86,7 +88,8 @@ export class GameRoom {
       isTransformedToWolf: false,
       doppelgangerTargetId: null,
       hasSeenRole: false,
-      connected: true
+      connected: true,
+      disconnectTimer: null
     };
 
     this.players.set(id, player);
@@ -100,9 +103,58 @@ export class GameRoom {
     return player;
   }
 
+  markDisconnected(socketId, gracePeriodMs = 180000, onExpire) {
+    const player = this.players.get(socketId);
+    if (!player) return;
+
+    player.connected = false;
+    this.log(`${player.name} หลุดการเชื่อมต่อชั่วคราว (รอการเชื่อมต่อใหม่ 3 นาที)`, 'warning');
+
+    if (player.disconnectTimer) {
+      clearTimeout(player.disconnectTimer);
+    }
+
+    player.disconnectTimer = setTimeout(() => {
+      if (!player.connected) {
+        this.removePlayer(socketId);
+        if (typeof onExpire === 'function') onExpire();
+      }
+    }, gracePeriodMs);
+  }
+
+  reconnectPlayer(sessionToken, newSocketId) {
+    for (const [oldSocketId, player] of this.players.entries()) {
+      if (player.sessionToken === sessionToken) {
+        if (player.disconnectTimer) {
+          clearTimeout(player.disconnectTimer);
+          player.disconnectTimer = null;
+        }
+
+        // Remap to new socket ID
+        this.players.delete(oldSocketId);
+        player.id = newSocketId;
+        player.connected = true;
+        this.players.set(newSocketId, player);
+
+        if (player.isHost) {
+          this.hostId = newSocketId;
+        }
+
+        this.log(`${player.name} เชื่อมต่อกลับเข้าห้องสำเร็จ!`, 'success');
+        return player;
+      }
+    }
+    return null;
+  }
+
   removePlayer(id) {
     const player = this.players.get(id);
     if (!player) return;
+
+    if (player.disconnectTimer) {
+      clearTimeout(player.disconnectTimer);
+      player.disconnectTimer = null;
+    }
 
     this.log(`${player.name} ออกจากห้องแล้ว`, 'warning');
     this.players.delete(id);
@@ -785,6 +837,7 @@ export class GameRoom {
       players: safePlayers,
       me: me ? {
         id: me.id,
+        sessionToken: me.sessionToken,
         name: me.name,
         avatar: me.avatar,
         isHost: me.isHost,
