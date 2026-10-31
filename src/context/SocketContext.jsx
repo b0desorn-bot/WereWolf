@@ -193,6 +193,18 @@ export function SocketProvider({ children }) {
     if (socket) socket.emit('restart_game');
   };
 
+  const leaveRoom = () => {
+    sound.playClick();
+    if (socket) {
+      socket.emit('leave_room');
+    }
+    setGameState(null);
+    // Clear ?room query parameter so it returns cleanly to join/create home screen
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -202,6 +214,7 @@ export function SocketProvider({ children }) {
         error,
         createRoom,
         joinRoom,
+        leaveRoom,
         updateDeck,
         startGame,
         confirmRoleSeen,

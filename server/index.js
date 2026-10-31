@@ -302,7 +302,22 @@ io.on('connection', (socket) => {
     broadcastRoomState(result.room);
   });
 
-  // 21. Disconnect
+  // 21. Leave Room
+  socket.on('leave_room', (callback) => {
+    const result = gameManager.findPlayerRoom(socket.id);
+    if (result) {
+      socket.leave(result.room.code);
+      result.room.removePlayer(socket.id);
+      if (result.room.players.size === 0) {
+        gameManager.deleteRoom(result.room.code);
+      } else {
+        broadcastRoomState(result.room);
+      }
+    }
+    if (typeof callback === 'function') callback({ success: true });
+  });
+
+  // 22. Disconnect
   socket.on('disconnect', () => {
     const result = gameManager.findPlayerRoom(socket.id);
     if (result) {

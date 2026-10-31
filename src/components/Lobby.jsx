@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Users, QrCode, Play, Plus, Minus, Wand2, Shield, Info, CheckCircle2, AlertTriangle, Crown } from 'lucide-react';
+import { Users, QrCode, Play, Plus, Minus, Wand2, Shield, Info, CheckCircle2, AlertTriangle, Crown, LogOut } from 'lucide-react';
 import { useGame } from '../context/SocketContext';
 import { ROLES, TEAMS, getRecommendedDeck } from '../data/roles';
 import { sound } from '../utils/audio';
 
 export function Lobby({ onOpenRoleGuide }) {
-  const { gameState, updateDeck, startGame } = useGame();
+  const { gameState, updateDeck, startGame, leaveRoom } = useGame();
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [showQrModal, setShowQrModal] = useState(false);
   const [startError, setStartError] = useState('');
@@ -106,17 +106,25 @@ export function Lobby({ onOpenRoleGuide }) {
           </p>
         </div>
 
-        {/* QR Code Action */}
-        <div className="flex items-center gap-3">
+        {/* Actions: QR Code & Leave Room */}
+        <div className="flex flex-wrap items-center gap-2.5">
           {qrDataUrl && (
             <button
               onClick={() => setShowQrModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-200 text-sm font-semibold shadow-md active:scale-95 transition-all"
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-200 text-xs sm:text-sm font-semibold shadow-md active:scale-95 transition-all"
             >
-              <QrCode className="w-5 h-5 text-purple-400" />
+              <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
               <span>แสดง QR Code ให้สแกน</span>
             </button>
           )}
+          <button
+            onClick={() => leaveRoom()}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-rose-950/60 hover:bg-rose-900/80 border border-rose-600/50 text-rose-300 hover:text-white text-xs sm:text-sm font-semibold shadow-md active:scale-95 transition-all"
+            title="ออกจากห้องกลับไปหน้าแรก"
+          >
+            <LogOut className="w-4 h-4 text-rose-400" />
+            <span>ออกจากห้อง</span>
+          </button>
         </div>
       </div>
 
