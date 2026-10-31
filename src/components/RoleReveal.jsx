@@ -14,15 +14,10 @@ export function RoleReveal() {
   const players = gameState?.players || [];
   const teamInfo = roleInfo ? TEAMS[roleInfo.team.toUpperCase()] : null;
 
-  const handleTouchStart = (e) => {
-    // Prevent default context menu on long press on iOS/Android
-    e.preventDefault();
+  // Toggle reveal on tap/click
+  const toggleReveal = () => {
     sound.playReveal();
-    setIsRevealed(true);
-  };
-
-  const handleTouchEnd = () => {
-    setIsRevealed(false);
+    setIsRevealed(prev => !prev);
   };
 
   const handleConfirmReady = () => {
@@ -43,90 +38,109 @@ export function RoleReveal() {
           การ์ดประจำตัวของคุณ
         </h2>
         <p className="text-xs text-slate-400 mt-1">
-          ระวังคนข้างๆ แอบมอง! แตะค้างไว้เพื่อดูบทบาทลับ
+          ระวังคนข้างๆ แอบมอง! แตะที่การ์ดเพื่อเปิดดูหรือซ่อนบทบาท
         </p>
       </div>
 
-      {/* Secret 3D Flip Card */}
-      <div className="w-72 sm:w-80 h-96 perspective-1000 select-none">
+      {/* Secret Card (Rock-solid Animated Reveal, 100% Cross-Browser Compatible) */}
+      <div className="w-72 sm:w-80 min-h-[400px] select-none">
         <div
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={() => { sound.playReveal(); setIsRevealed(true); }}
-          onMouseUp={() => setIsRevealed(false)}
-          onMouseLeave={() => setIsRevealed(false)}
-          className={`relative w-full h-full rounded-3xl transition-transform duration-300 transform-style-3d cursor-pointer active:scale-95 shadow-2xl ${
-            isRevealed ? 'rotate-y-180' : ''
+          onClick={toggleReveal}
+          className="relative w-full h-[400px] rounded-3xl cursor-pointer active:scale-[0.98] transition-all duration-300 shadow-2xl"
+        >
+          {!isRevealed ? (
+            /* Card Back (Locked / Hidden) */
+            <div className="w-full h-full rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 border-2 border-purple-500/50 p-6 flex flex-col items-center justify-between shadow-purple-950/60 hover:border-purple-400 transition-colors">
+              <div className="w-full flex items-center justify-between text-xs text-purple-300">
+                <span className="font-mono tracking-widest font-bold">WEREWOLF</span>
+                <span className="px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-500/40 text-[10px]">
+                  DELUXE
+                </span>
+              </div>
+
+              <div className="flex flex-col items-center justify-center text-center space-y-3">
+                <div className="w-24 h-24 rounded-full bg-purple-950/80 border-2 border-purple-500/50 flex items-center justify-center text-4xl shadow-xl animate-pulse-slow">
+                  <Lock className="w-10 h-10 text-purple-300" />
+                </div>
+                <div>
+                  <p className="font-black text-lg text-white">
+                    แตะที่นี่เพื่อดูบทบาท
+                  </p>
+                  <p className="text-xs text-purple-300/80 mt-1 max-w-[210px] leading-relaxed">
+                    แตะ 1 ครั้งเพื่อเปิดดู เมื่ออ่านจบแตะอีกครั้งเพื่อซ่อน
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-full text-center">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-900/40 border border-purple-500/30 text-xs font-bold text-purple-300">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>แตะเพื่อเปิดดูบทบาท</span>
+                </span>
+              </div>
+            </div>
+          ) : (
+            /* Card Front (Revealed Role Details) */
+            <div className="w-full h-full rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border-2 border-purple-400 p-6 flex flex-col items-center justify-between shadow-2xl animate-fade-in">
+              {/* Top Team Badge */}
+              <div className="w-full flex items-center justify-between">
+                <span className={`text-[11px] px-3 py-1 rounded-full border ${teamInfo?.badgeBg} font-bold`}>
+                  {teamInfo?.name}
+                </span>
+                <span className="text-xs font-mono text-slate-400">
+                  คะแนน: {roleInfo?.weight > 0 ? `+${roleInfo?.weight}` : roleInfo?.weight}
+                </span>
+              </div>
+
+              {/* Role Emoji & Name */}
+              <div className="flex flex-col items-center justify-center text-center my-2">
+                <div className="text-6xl mb-2 filter drop-shadow-lg animate-bounce-subtle">
+                  {roleInfo?.emoji}
+                </div>
+                <h3 className="text-2xl font-black text-white tracking-wide">
+                  {roleInfo?.name}
+                </h3>
+                <p className="text-xs text-purple-300/90 font-medium mt-1">
+                  {teamInfo?.description}
+                </p>
+              </div>
+
+              {/* Role Ability Box */}
+              <div className="w-full p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/90 text-left">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 mb-1">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>พลังและความสามารถ:</span>
+                </div>
+                <p className="text-[12px] text-slate-200 leading-relaxed font-normal">
+                  {roleInfo?.description}
+                </p>
+              </div>
+
+              {/* Tap to hide hint */}
+              <div className="w-full text-center pt-1">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-950/60 border border-rose-500/40 text-xs font-bold text-rose-300">
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span>แตะเพื่อซ่อนการ์ดทันที</span>
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Button to toggle reveal explicitly */}
+      <div className="w-full max-w-xs flex justify-center">
+        <button
+          onClick={toggleReveal}
+          className={`px-4 py-2 rounded-2xl border text-xs font-bold flex items-center gap-2 transition-all ${
+            isRevealed
+              ? 'bg-rose-950/70 border-rose-500/60 text-rose-300 hover:bg-rose-900/80'
+              : 'bg-purple-950/70 border-purple-500/60 text-purple-300 hover:bg-purple-900/80'
           }`}
         >
-          {/* Card Back (Locked / Hidden) */}
-          <div className="absolute inset-0 w-full h-full rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 border-2 border-purple-500/40 p-6 flex flex-col items-center justify-between backface-hidden shadow-purple-950/50">
-            <div className="w-full flex items-center justify-between text-xs text-purple-300">
-              <span className="font-mono tracking-widest font-bold">WEREWOLF</span>
-              <span>DELUXE</span>
-            </div>
-
-            <div className="flex flex-col items-center justify-center text-center space-y-3">
-              <div className="w-20 h-20 rounded-full bg-purple-950/80 border border-purple-500/40 flex items-center justify-center text-4xl shadow-lg animate-pulse-slow">
-                <Lock className="w-9 h-9 text-purple-300" />
-              </div>
-              <div>
-                <p className="font-extrabold text-base text-white">
-                  แตะค้างไว้เพื่อแอบดู
-                </p>
-                <p className="text-xs text-slate-400 mt-1 max-w-[200px]">
-                  (เมื่อปล่อยนิ้ว การ์ดจะซ่อนตัวตนของคุณทันที)
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full text-center text-[11px] text-purple-400/80 font-mono">
-              แตะค้างที่นี่ • HOLD TO REVEAL
-            </div>
-          </div>
-
-          {/* Card Front (Revealed Role Details) */}
-          <div className="absolute inset-0 w-full h-full rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border-2 border-purple-400 p-6 flex flex-col items-center justify-between rotate-y-180 backface-hidden shadow-2xl overflow-hidden">
-            {/* Top Team Badge */}
-            <div className="w-full flex items-center justify-between">
-              <span className={`text-[11px] px-3 py-1 rounded-full border ${teamInfo?.badgeBg} font-bold`}>
-                {teamInfo?.name}
-              </span>
-              <span className="text-xs font-mono text-slate-400">
-                คะแนน: {roleInfo?.weight > 0 ? `+${roleInfo?.weight}` : roleInfo?.weight}
-              </span>
-            </div>
-
-            {/* Role Emoji & Name */}
-            <div className="flex flex-col items-center justify-center text-center">
-              <div className="text-6xl mb-2 filter drop-shadow-lg animate-bounce-subtle">
-                {roleInfo?.emoji}
-              </div>
-              <h3 className="text-2xl font-black text-white tracking-wide">
-                {roleInfo?.name}
-              </h3>
-              <p className="text-xs text-purple-300/90 font-medium mt-1">
-                {teamInfo?.description}
-              </p>
-            </div>
-
-            {/* Role Ability Box */}
-            <div className="w-full p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-left">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>พลังและความสามารถ:</span>
-              </div>
-              <p className="text-[11px] text-slate-200 leading-relaxed">
-                {roleInfo?.description}
-              </p>
-            </div>
-
-            {/* Hint */}
-            <div className="text-[10px] text-slate-500 italic">
-              ปล่อยนิ้วเพื่อซ่อนการ์ด
-            </div>
-          </div>
-        </div>
+          {isRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          <span>{isRevealed ? 'ซ่อนการ์ดบทบาทลับ' : 'เปิดดูการ์ดบทบาทลับ'}</span>
+        </button>
       </div>
 
       {/* Readiness Confirmation Button */}
